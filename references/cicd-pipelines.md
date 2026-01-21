@@ -2,15 +2,14 @@
 
 ## Overview
 
-This guide provides CI/CD pipeline templates for GitLab CI and GitHub Actions, with authentication patterns for AWS and GCP. Features include:
+This guide provides CI/CD pipeline templates for **Terragrunt Stacks** (explicit stacks using `terragrunt.stack.hcl`). These templates are suggestions that can be adapted to your organization's needs.
 
-- Version validation
-- Format checking (`hclfmt`)
-- Validate, Plan, Apply stages
+**Key features:**
+- `terragrunt stack run` commands for explicit stacks
 - OIDC-based authentication (no static credentials)
 - SSH-based Git access (recommended over HTTPS)
 - Provider caching for performance
-- Change-based triggers
+- Selective unit targeting with `--queue-include-dir`
 
 > **Why SSH over HTTPS?**
 > - **Enhanced security**: SSH keys provide stronger authentication than passwords or tokens
@@ -19,17 +18,53 @@ This guide provides CI/CD pipeline templates for GitLab CI and GitHub Actions, w
 
 ---
 
+## Terragrunt Stack Commands
+
+When working with explicit stacks (`terragrunt.stack.hcl`), use `terragrunt stack run` instead of `terragrunt run-all`:
+
+```bash
+# Navigate to stack directory
+cd prod/us-east-1/my-service/
+
+# Plan entire stack
+terragrunt stack run plan
+
+# Apply entire stack
+terragrunt stack run apply
+
+# Target specific units within the stack
+terragrunt stack run plan --queue-include-dir ".terragrunt-stack/dynamodb"
+terragrunt stack run apply --queue-include-dir ".terragrunt-stack/lambda"
+
+# Destroy stack
+terragrunt stack run destroy
+```
+
+### Useful Flags
+
+| Flag | Description | Use Case |
+|------|-------------|----------|
+| `--queue-include-dir` | Target specific units by path | Deploy only changed components |
+| `--queue-ignore-dag-order` | Run units concurrently | Faster plans (⚠️ dangerous for apply) |
+| `--queue-ignore-errors` | Continue on failures | Identify all errors at once |
+| `--out-dir` | Save plan files to directory | Artifact storage for apply stage |
+| `--parallelism N` | Limit concurrent units | Prevent rate limiting |
+| `--filter` | Flexible unit targeting | Complex filtering patterns |
+
+> **Note:** The `.terragrunt-stack` directory is auto-generated. Use `terragrunt stack generate` to pre-generate it, or `terragrunt stack clean` to remove it.
+
+---
+
 ## GitLab CI
 
 > **Best Practice: Reusable Templates**
 >
-> Always structure GitLab CI with reusable templates (`.template-name`) that can be extended and overridden. This provides:
+> Structure GitLab CI with reusable templates (`.template-name`) that can be extended and overridden:
 > - **Consistency**: All jobs follow the same patterns
 > - **Maintainability**: Update logic in one place
-> - **Flexibility**: Override specific steps when needed (e.g., custom `before_script`, different `rules`)
-> - **DRY principle**: Avoid duplicating configuration across jobs
+> - **Flexibility**: Override specific steps when needed
 >
-> Use `extends` to inherit from templates and override only what's necessary per environment or job.
+> These templates are suggestions—adapt them to your organization's requirements.
 
 ### Base Templates (`.gitlab-ci.yml`)
 
@@ -43,7 +78,7 @@ default:
   image: "ghcr.io/opentofu/opentofu:latest"
 
 variables:
-  TG_PATH: "."
+  TG_STACK_PATH: "."              # Path to terragrunt.stack.hcl directory
   TG_PARALLELISM: "10"
   # Performance: Provider caching
   TG_PROVIDER_CACHE: "1"
@@ -84,22 +119,9 @@ variables:
   script:
     - |
       echo "===== Version Check ====="
-
-      if [ -f ".opentofu-version" ]; then
-        REPO_VERSION=$(cat .opentofu-version)
-        INSTALLED_VERSION=$(tofu version -json | jq -r '.terraform_version')
-        echo "OpenTofu - Required: $REPO_VERSION, Installed: $INSTALLED_VERSION"
-        [ "$REPO_VERSION" != "$INSTALLED_VERSION" ] && echo "ERROR: Version mismatch" && exit 1
-      fi
-
-      if [ -f ".terragrunt-version" ]; then
-        REPO_VERSION=$(cat .terragrunt-version)
-        INSTALLED_VERSION=$(terragrunt --version | awk '{print $3}' | sed 's/v//')
-        echo "Terragrunt - Required: $REPO_VERSION, Installed: $INSTALLED_VERSION"
-        [ "$REPO_VERSION" != "$INSTALLED_VERSION" ] && echo "ERROR: Version mismatch" && exit 1
-      fi
-
-      echo "All versions match"
+      # Adapt version checks to your tooling
+      terragrunt --version
+      tofu --version || terraform --version
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH'
@@ -108,97 +130,107 @@ variables:
   stage: checks
   cache: {}
   script:
-    - cd $TG_PATH
+    - cd $TG_STACK_PATH
     - terragrunt hclfmt --terragrunt-check
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH'
 
-.terragrunt_validate_template:
-  stage: checks
-  extends:
-    - .terragrunt-cache
-  script:
-    - cd $TG_PATH
-    - |
-      terragrunt run-all init \
-        --terragrunt-non-interactive \
-        --terragrunt-parallelism ${TG_PARALLELISM}
-
-      terragrunt run-all validate \
-        --terragrunt-non-interactive \
-        --terragrunt-parallelism ${TG_PARALLELISM}
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes:
-        - $TG_PATH/**/*
-    - if: '$CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH'
-      changes:
-        - $TG_PATH/**/*
-
 # -----------------------------------------------------------------------------
-# PLAN TEMPLATE
+# STACK PLAN TEMPLATE
 # -----------------------------------------------------------------------------
 
-.terragrunt_plan_template:
+.terragrunt_stack_plan_template:
   stage: plan
   extends:
     - .terragrunt-cache
   script:
-    - cd $TG_PATH
+    - cd $TG_STACK_PATH
     - |
-      terragrunt run-all plan \
-        -out="tfplan" \
-        --terragrunt-non-interactive \
-        --terragrunt-parallelism ${TG_PARALLELISM} \
-        --provider-cache
+      echo "===== Stack Plan ====="
 
-      echo "===== Plan Summary ====="
-      terragrunt run-all show "tfplan" \
-        --terragrunt-non-interactive \
-        -no-color
+      # Plan entire stack
+      terragrunt stack run plan \
+        --parallelism ${TG_PARALLELISM}
+
+      # Optional: Use --out-dir to save plans for apply stage
+      # terragrunt stack run plan --out-dir ${CI_PROJECT_DIR}/plans
   artifacts:
     paths:
-      - $TG_PATH/**/tfplan
+      - $TG_STACK_PATH/.terragrunt-stack/**/tfplan
     expire_in: 1 day
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes:
-        - $TG_PATH/**/*
+        - $TG_STACK_PATH/**/*
     - if: '$CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH'
       changes:
-        - $TG_PATH/**/*
+        - $TG_STACK_PATH/**/*
 
 # -----------------------------------------------------------------------------
-# APPLY TEMPLATE
+# STACK APPLY TEMPLATE
 # -----------------------------------------------------------------------------
 
-.terragrunt_apply_template:
+.terragrunt_stack_apply_template:
   stage: apply
   extends:
     - .terragrunt-cache
   script:
-    - cd $TG_PATH
+    - cd $TG_STACK_PATH
     - |
-      terragrunt run-all plan \
-        -out="tfplan" \
-        --terragrunt-non-interactive \
-        --terragrunt-parallelism ${TG_PARALLELISM} \
-        --provider-cache
+      echo "===== Stack Apply ====="
 
-      echo "===== Applying Changes ====="
-      terragrunt run-all apply \
-        "tfplan" \
-        --terragrunt-non-interactive \
-        --terragrunt-parallelism ${TG_PARALLELISM}
+      # Re-plan and apply (recommended for safety)
+      terragrunt stack run plan \
+        --parallelism ${TG_PARALLELISM}
+
+      terragrunt stack run apply \
+        --parallelism ${TG_PARALLELISM}
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: manual
       changes:
-        - $TG_PATH/**/*
+        - $TG_STACK_PATH/**/*
     - if: '$CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH'
       changes:
-        - $TG_PATH/**/*
+        - $TG_STACK_PATH/**/*
+
+# -----------------------------------------------------------------------------
+# TARGETED UNIT TEMPLATES (Optional)
+# -----------------------------------------------------------------------------
+# Use these when you need to deploy specific units within a stack
+
+.terragrunt_stack_plan_unit_template:
+  stage: plan
+  extends:
+    - .terragrunt-cache
+  script:
+    - cd $TG_STACK_PATH
+    - |
+      echo "===== Plan Unit: ${TG_TARGET_UNIT} ====="
+      terragrunt stack run plan \
+        --queue-include-dir ".terragrunt-stack/${TG_TARGET_UNIT}" \
+        --parallelism ${TG_PARALLELISM}
+  variables:
+    TG_TARGET_UNIT: ""  # Override per job (e.g., "dynamodb", "lambda")
+
+.terragrunt_stack_apply_unit_template:
+  stage: apply
+  extends:
+    - .terragrunt-cache
+  script:
+    - cd $TG_STACK_PATH
+    - |
+      echo "===== Apply Unit: ${TG_TARGET_UNIT} ====="
+      terragrunt stack run plan \
+        --queue-include-dir ".terragrunt-stack/${TG_TARGET_UNIT}" \
+        --parallelism ${TG_PARALLELISM}
+
+      terragrunt stack run apply \
+        --queue-include-dir ".terragrunt-stack/${TG_TARGET_UNIT}" \
+        --parallelism ${TG_PARALLELISM}
+  variables:
+    TG_TARGET_UNIT: ""
 ```
 
 ---
@@ -247,18 +279,19 @@ variables:
       # <RETRIEVE_SSH_KEY_FROM_SECRET_MANAGER> > ~/.ssh/id_rsa
       chmod 0400 ~/.ssh/id_rsa
 
-# Example: AWS Staging Environment
-.aws-staging-variables:
+# Example: AWS Staging Stack
+.aws-staging-stack:
   extends: .aws-variables
   variables:
-    TG_PATH: "non-prod/us-east-1/staging"
+    TG_STACK_PATH: "non-prod/us-east-1/staging/my-service"
     TG_TARGET_ACCOUNT: "111111111111"
     AWS_REGION: "us-east-1"
 
+# Example jobs using stack templates
 aws:staging:fmt:
   extends:
     - .terragrunt_fmt_template
-    - .aws-staging-variables
+    - .aws-staging-stack
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes:
@@ -266,9 +299,9 @@ aws:staging:fmt:
 
 aws:staging:plan:
   extends:
-    - .terragrunt_plan_template
+    - .terragrunt_stack_plan_template
     - .aws-oidc-auth
-    - .aws-staging-variables
+    - .aws-staging-stack
   needs: ["aws:staging:fmt"]
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -277,9 +310,9 @@ aws:staging:plan:
 
 aws:staging:apply:
   extends:
-    - .terragrunt_apply_template
+    - .terragrunt_stack_apply_template
     - .aws-oidc-auth
-    - .aws-staging-variables
+    - .aws-staging-stack
   rules:
     - if: '$CI_COMMIT_REF_NAME == "main"'
       changes:
@@ -336,21 +369,22 @@ aws:staging:apply:
       # <RETRIEVE_SSH_KEY_FROM_SECRET_MANAGER> > ~/.ssh/id_rsa
       chmod 0400 ~/.ssh/id_rsa
 
-# Example: GCP Dev Environment
-.gcp-dev-variables:
+# Example: GCP Dev Stack
+.gcp-dev-stack:
   extends: .gcp-variables
   variables:
-    TG_PATH: "gcp-dev/us-east4"
+    TG_STACK_PATH: "gcp-dev/us-east4/my-service"
     TG_PARALLELISM: "5"
     GC_PROJECT_NUMBER: "123456789012"
     SERVICE_ACCOUNT: "sa-tf-admin@my-project-dev.iam.gserviceaccount.com"
   tags:
     - gcp
 
+# Example jobs using stack templates
 gcp:dev:fmt:
   extends:
     - .terragrunt_fmt_template
-    - .gcp-dev-variables
+    - .gcp-dev-stack
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes:
@@ -358,9 +392,9 @@ gcp:dev:fmt:
 
 gcp:dev:plan:
   extends:
-    - .terragrunt_plan_template
+    - .terragrunt_stack_plan_template
     - .gcp-oidc-auth
-    - .gcp-dev-variables
+    - .gcp-dev-stack
   needs: ["gcp:dev:fmt"]
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -369,9 +403,9 @@ gcp:dev:plan:
 
 gcp:dev:apply:
   extends:
-    - .terragrunt_apply_template
+    - .terragrunt_stack_apply_template
     - .gcp-oidc-auth
-    - .gcp-dev-variables
+    - .gcp-dev-stack
   rules:
     - if: '$CI_COMMIT_REF_NAME == "main"'
       changes:
@@ -380,204 +414,44 @@ gcp:dev:apply:
 
 ---
 
-### Multi-Component Pattern (GCP Example)
+### Targeting Specific Units
 
-For repos with multiple components in the same environment:
+When you need to deploy specific units within a stack (e.g., only the database component):
 
 ```yaml
-# gcp-dev/.gitlab-ci.yml
+# Example: Target a specific unit within the stack
 
-include:
-  - local: '/.gitlab-ci.yml'
-
-.gcp-dev-base:
+gcp:dev:dynamodb:plan:
   extends:
+    - .terragrunt_stack_plan_unit_template
     - .gcp-oidc-auth
+    - .gcp-dev-stack
   variables:
-    TG_PATH: "gcp-dev/${COMPONENT_PATH}"
-    TG_PARALLELISM: "5"
-    GC_PROJECT_NUMBER: "123456789012"
-    SERVICE_ACCOUNT: "sa-tf-admin@my-project-dev.iam.gserviceaccount.com"
-    WORKLOAD_IDENTITY_POOL: "gitlab-pool"
-    WORKLOAD_IDENTITY_PROVIDER: "gitlab-provider"
-  tags:
-    - gcp
-
-# -----------------------------------------------------------------------------
-# us-east4/iam
-# -----------------------------------------------------------------------------
-gcp-dev:iam:fmt:
-  extends: .terragrunt_fmt_template
-  variables:
-    TG_PATH: "gcp-dev/us-east4/iam"
+    TG_TARGET_UNIT: "dynamodb"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes:
-        - gcp-dev/us-east4/iam/**/*
+        - gcp-dev/us-east4/my-service/terragrunt.stack.hcl
 
-gcp-dev:iam:plan:
+gcp:dev:dynamodb:apply:
   extends:
-    - .terragrunt_plan_template
-    - .gcp-dev-base
+    - .terragrunt_stack_apply_unit_template
+    - .gcp-oidc-auth
+    - .gcp-dev-stack
   variables:
-    COMPONENT_PATH: "us-east4/iam"
-  needs: ["gcp-dev:iam:fmt"]
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes:
-        - gcp-dev/us-east4/iam/**/*
-
-gcp-dev:iam:apply:
-  extends:
-    - .terragrunt_apply_template
-    - .gcp-dev-base
-  variables:
-    COMPONENT_PATH: "us-east4/iam"
+    TG_TARGET_UNIT: "dynamodb"
+  needs: ["gcp:dev:dynamodb:plan"]
   rules:
     - if: '$CI_COMMIT_REF_NAME == "main"'
-      changes:
-        - gcp-dev/us-east4/iam/**/*
-
-# -----------------------------------------------------------------------------
-# us-east4/kms
-# -----------------------------------------------------------------------------
-gcp-dev:kms:fmt:
-  extends: .terragrunt_fmt_template
-  variables:
-    TG_PATH: "gcp-dev/us-east4/kms"
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes:
-        - gcp-dev/us-east4/kms/**/*
-
-gcp-dev:kms:plan:
-  extends:
-    - .terragrunt_plan_template
-    - .gcp-dev-base
-  variables:
-    COMPONENT_PATH: "us-east4/kms"
-  needs: ["gcp-dev:kms:fmt"]
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes:
-        - gcp-dev/us-east4/kms/**/*
-
-gcp-dev:kms:apply:
-  extends:
-    - .terragrunt_apply_template
-    - .gcp-dev-base
-  variables:
-    COMPONENT_PATH: "us-east4/kms"
-  rules:
-    - if: '$CI_COMMIT_REF_NAME == "main"'
-      changes:
-        - gcp-dev/us-east4/kms/**/*
-
-# -----------------------------------------------------------------------------
-# us-east4/storage
-# -----------------------------------------------------------------------------
-gcp-dev:storage:fmt:
-  extends: .terragrunt_fmt_template
-  variables:
-    TG_PATH: "gcp-dev/us-east4/storage"
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes:
-        - gcp-dev/us-east4/storage/**/*
-
-gcp-dev:storage:plan:
-  extends:
-    - .terragrunt_plan_template
-    - .gcp-dev-base
-  variables:
-    COMPONENT_PATH: "us-east4/storage"
-  needs: ["gcp-dev:storage:fmt"]
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes:
-        - gcp-dev/us-east4/storage/**/*
-
-gcp-dev:storage:apply:
-  extends:
-    - .terragrunt_apply_template
-    - .gcp-dev-base
-  variables:
-    COMPONENT_PATH: "us-east4/storage"
-  rules:
-    - if: '$CI_COMMIT_REF_NAME == "main"'
-      changes:
-        - gcp-dev/us-east4/storage/**/*
-
-# -----------------------------------------------------------------------------
-# us-east4/secrets
-# -----------------------------------------------------------------------------
-gcp-dev:secrets:fmt:
-  extends: .terragrunt_fmt_template
-  variables:
-    TG_PATH: "gcp-dev/us-east4/secrets"
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes:
-        - gcp-dev/us-east4/secrets/**/*
-
-gcp-dev:secrets:plan:
-  extends:
-    - .terragrunt_plan_template
-    - .gcp-dev-base
-  variables:
-    COMPONENT_PATH: "us-east4/secrets"
-  needs: ["gcp-dev:secrets:fmt"]
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes:
-        - gcp-dev/us-east4/secrets/**/*
-
-gcp-dev:secrets:apply:
-  extends:
-    - .terragrunt_apply_template
-    - .gcp-dev-base
-  variables:
-    COMPONENT_PATH: "us-east4/secrets"
-  rules:
-    - if: '$CI_COMMIT_REF_NAME == "main"'
-      changes:
-        - gcp-dev/us-east4/secrets/**/*
-
-# -----------------------------------------------------------------------------
-# us-east4/api
-# -----------------------------------------------------------------------------
-gcp-dev:api:fmt:
-  extends: .terragrunt_fmt_template
-  variables:
-    TG_PATH: "gcp-dev/us-east4/api"
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes:
-        - gcp-dev/us-east4/api/**/*
-
-gcp-dev:api:plan:
-  extends:
-    - .terragrunt_plan_template
-    - .gcp-dev-base
-  variables:
-    COMPONENT_PATH: "us-east4/api"
-  needs: ["gcp-dev:api:fmt"]
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes:
-        - gcp-dev/us-east4/api/**/*
-
-gcp-dev:api:apply:
-  extends:
-    - .terragrunt_apply_template
-    - .gcp-dev-base
-  variables:
-    COMPONENT_PATH: "us-east4/api"
-  rules:
-    - if: '$CI_COMMIT_REF_NAME == "main"'
-      changes:
-        - gcp-dev/us-east4/api/**/*
+      when: manual
 ```
+
+> **Tip:** Use `--queue-include-dir` to target multiple units:
+> ```bash
+> terragrunt stack run plan \
+>   --queue-include-dir ".terragrunt-stack/s3" \
+>   --queue-include-dir ".terragrunt-stack/dynamodb"
+> ```
 
 ---
 
@@ -852,7 +726,12 @@ module "gcp_workload_identity" {
 
 ## References
 
-### Terragrunt & CI/CD Basics
+### Terragrunt Stack Commands
+- [Terragrunt Stacks](https://terragrunt.gruntwork.io/docs/features/stacks/) - Official documentation for explicit stacks
+- [Terragrunt Run Command](https://terragrunt.gruntwork.io/docs/reference/cli/commands/run/) - CLI reference for run flags
+- [Run Queue](https://terragrunt.gruntwork.io/docs/features/run-queue/) - Queue flags and filtering
+
+### CI/CD Basics
 - [Terragrunt Performance Guide](performance.md)
 - [GitLab CI/CD Documentation](https://docs.gitlab.com/ee/ci/)
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
