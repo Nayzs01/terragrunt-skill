@@ -40,11 +40,28 @@ A Claude Code skill providing best practices guidance for Terragrunt infrastruct
 /install jfr992/terragrunt-skill
 ```
 
+> **Note:** Auto-discovery on claudemarketplaces.com requires 5+ GitHub stars. Before that threshold, use manual installation or share the direct repository link.
+
 ### Manual Installation
 Clone to your Claude Code skills directory:
 ```bash
 git clone https://github.com/jfr992/terragrunt-skill.git ~/.claude/skills/terragrunt-skill
 ```
+
+### Local Testing
+To test the skill in a specific project, add it to your project's Claude Code settings:
+
+```bash
+# Create .claude/settings.json in your project root
+mkdir -p .claude
+cat > .claude/settings.json << 'EOF'
+{
+  "skills": ["~/.claude/skills/terragrunt-skill"]
+}
+EOF
+```
+
+Or add the skill path to your global Claude Code configuration.
 
 ## Usage
 
