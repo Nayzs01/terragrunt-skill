@@ -1,4 +1,13 @@
-# 1.1.0 (2026-01-21)
+# [1.2.0](https://github.com/jfr992/terragrunt-skill/compare/v1.1.0...v1.2.0) (2026-01-22)
+
+
+### Features
+
+* update based on maintainer feedback and add validation ([7f7b7dc](https://github.com/jfr992/terragrunt-skill/commit/7f7b7dcc196da8261b14794e151aecc5dec36d62))
+
+
+
+# [1.1.0](https://github.com/jfr992/terragrunt-skill/compare/7a1582c3ab4598a0ca4fbdd4424f137ed8aa7d6d...v1.1.0) (2026-01-21)
 
 
 ### Bug Fixes
