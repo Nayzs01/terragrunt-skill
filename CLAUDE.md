@@ -6,13 +6,15 @@ This file serves as context for Claude Code when working on the terragrunt-skill
 
 This skill uses **progressive disclosure** to minimize token usage:
 
-- **SKILL.md** (~900 lines): Core patterns for Terragrunt stacks, units, and catalog structure
+- **SKILL.md** (~960 lines): Core patterns for Terragrunt stacks, units, and catalog structure
 - **references/**: Extended documentation loaded on demand
   - `cicd-pipelines.md`: GitLab CI and GitHub Actions with AWS/GCP OIDC
   - `patterns.md`: Repository separation, pre-commit hooks, semantic versioning
   - `performance.md`: Provider caching, benchmarking tools, optimization
   - `state-management.md`: S3/DynamoDB backend patterns
   - `multi-account.md`: Cross-account role assumption patterns
+- **.claude-plugin/**: Marketplace distribution configuration
+- **.github/workflows/**: CI/CD for validation and automated releases
 
 ## Content Philosophy
 
@@ -44,6 +46,9 @@ Units resolve symbolic references like `"../acm"` to actual dependency outputs, 
 ### Catalog vs Live
 - **Catalog**: Reusable units and template stacks (version-controlled patterns)
 - **Live**: Environment-specific deployments consuming the catalog
+- **Architecture Options**:
+  - Option A: Modules in separate repos (independent versioning, dedicated CI/CD)
+  - Option B: Modules in catalog repo (simpler structure, single versioning)
 
 ## Development Workflow
 
@@ -57,6 +62,7 @@ Units resolve symbolic references like `"../acm"` to actual dependency outputs, 
 - Run `terragrunt hclfmt --check` on generated examples
 - Verify stack files with `terragrunt stack generate`
 - Test unit dependency resolution
+- CI validates SKILL.md frontmatter and marketplace.json on every PR
 
 ## File Structure
 
@@ -65,6 +71,11 @@ terragrunt-skill/
 ├── SKILL.md                    # Main skill (loaded by Claude Code)
 ├── CLAUDE.md                   # This file (memory/contributor guide)
 ├── README.md                   # Repository documentation
+├── .claude-plugin/
+│   └── marketplace.json        # Claude Code marketplace distribution
+├── .github/workflows/
+│   ├── validate.yml            # Skill validation (frontmatter, links)
+│   └── automated-release.yml   # Conventional commits → GitHub releases
 ├── assets/
 │   ├── catalog-structure/      # Example catalog layout
 │   ├── live-structure/         # Example live repo layout
@@ -86,5 +97,9 @@ Contributions should:
 ## References
 
 - [Terragrunt Documentation](https://terragrunt.gruntwork.io/docs/)
-- [Terragrunt Stacks RFC](https://terragrunt.gruntwork.io/docs/rfc/stacks/)
+- [Terragrunt Stacks](https://terragrunt.gruntwork.io/docs/features/stacks/)
+- [Terragrunt Filters](https://terragrunt.gruntwork.io/docs/features/filter/)
+- [Terragrunt State Backend](https://terragrunt.gruntwork.io/docs/features/state-backend/)
+- [Terragrunt Catalog](https://terragrunt.gruntwork.io/docs/features/catalog/)
+- [Boilerplate](https://github.com/gruntwork-io/boilerplate) - Template generation for scaffolding
 - [OpenTofu Documentation](https://opentofu.org/docs/)
