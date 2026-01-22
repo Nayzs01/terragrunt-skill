@@ -30,7 +30,7 @@ jobs:
           git-user-name: "github-actions[bot]"
           git-user-email: "github-actions[bot]@users.noreply.github.com"
           version-file: ".claude-plugin/marketplace.json"
-          version-path: "metadata.version"
+          version-path: "version"
           preset: "angular"
           tag-prefix: "v"
           output-file: "CHANGELOG.md"
@@ -52,8 +52,8 @@ jobs:
           with open(".claude-plugin/marketplace.json", "r") as f:
               data = json.load(f)
 
-          # Update metadata version (already done by changelog action)
-          # Update plugin version
+          # Update root version (already done by changelog action)
+          # Update plugin version to match
           if "plugins" in data and len(data["plugins"]) > 0:
               data["plugins"][0]["version"] = version
               print(f"Updated plugin version to {version}")

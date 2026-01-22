@@ -1,43 +1,32 @@
 {
-  "name": "terragrunt-skill",
+  "name": "jfr992",
   "owner": {
     "name": "jfr992"
   },
+  "version": "1.1.0",
   "metadata": {
-    "description": "Terragrunt infrastructure-as-code patterns with OpenTofu/Terraform",
-    "version": "1.1.0"
+    "description": "Terragrunt infrastructure-as-code patterns with OpenTofu/Terraform - stacks, units, catalog patterns, CI/CD pipelines",
+    "repository": "https://github.com/jfr992/terragrunt-skill",
+    "license": "Apache-2.0"
   },
   "plugins": [
     {
-      "name": "terragrunt",
+      "name": "terragrunt-skill",
+      "description": "Use when working with Terragrunt - creating stacks, units, catalog patterns, setting up CI/CD pipelines (GitLab CI, GitHub Actions), configuring AWS/GCP OIDC authentication, optimizing performance with provider caching, or managing multi-account deployments",
       "source": "./",
-      "description": "Best practices for Terragrunt stacks, units, and catalog patterns with CI/CD pipelines for AWS and GCP",
-      "version": "1.1.0",
-      "author": {
-        "name": "jfr992"
-      },
-      "repository": "https://github.com/jfr992/terragrunt-skill",
-      "license": "Apache-2.0",
+      "category": "development",
       "keywords": [
         "terragrunt",
         "opentofu",
         "terraform",
         "infrastructure-as-code",
-        "aws",
-        "gcp",
-        "devops"
-      ],
-      "category": "infrastructure",
-      "tags": [
-        "terragrunt",
-        "iac",
         "stacks",
         "units",
-        "cicd",
         "aws",
-        "gcp"
+        "gcp",
+        "ci-cd"
       ],
-      "strict": false
+      "version": "1.1.0"
     }
   ]
 }

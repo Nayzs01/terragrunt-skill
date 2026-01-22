@@ -6,6 +6,8 @@ A Claude Code skill providing best practices guidance for Terragrunt infrastruct
 
 > **Important:** Catalog and Live repositories should be **separate Git repositories**. The live repo consumes units and stacks from the catalog via Git URLs.
 
+### Option A: Modules in Separate Repos
+
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        SEPARATE REPOSITORIES                         │
@@ -25,6 +27,36 @@ A Claude Code skill providing best practices guidance for Terragrunt infrastruct
          └─────────────────────────┴────────────────────────┘
                     Live repo references both via Git URLs
 ```
+
+### Option B: Modules in Catalog
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│                    SEPARATE REPOSITORIES                       │
+├─────────────────────────────────┬─────────────────────────────┤
+│   Catalog Repo                  │   Live Repo                 │
+│   (infrastructure-<org>-catalog)│   (infrastructure-<org>-live)
+├─────────────────────────────────┼─────────────────────────────┤
+│ • modules/ (OpenTofu modules)   │ • root.hcl                  │
+│ • units/ (module wrappers)      │ • account.hcl               │
+│ • stacks/ (unit compositions)   │ • Deployments               │
+│ • Discovered via `tg catalog`   │ • Consumes catalog via Git  │
+│ • Single versioning strategy    │ • `tg scaffold` for new     │
+└─────────────────────────────────┴─────────────────────────────┘
+                ▲                              │
+                └──────────────────────────────┘
+                  Live repo references catalog
+```
+
+**Trade-offs:**
+
+| Aspect | Option A (Separate Module Repos) | Option B (Modules in Catalog) |
+|--------|----------------------------------|-------------------------------|
+| Versioning | Independent per module | Single catalog version |
+| CI/CD | Dedicated pipeline per module | One pipeline for all |
+| Complexity | More repos to manage | Simpler structure |
+| Team ownership | Clear boundaries | Shared ownership |
+| `terragrunt catalog` | Discovers units/stacks | Discovers modules too |
 
 ## Features
 
@@ -59,33 +91,30 @@ A Claude Code skill providing best practices guidance for Terragrunt infrastruct
 
 ## Installation
 
-### Claude Code Marketplace
+This skill is distributed via Claude Code marketplace using `.claude-plugin/marketplace.json`.
+
+### Claude Code (Recommended)
+
 ```bash
-/install jfr992/terragrunt-skill
+/plugin marketplace add jfr992/terragrunt-skill
+/plugin install terragrunt-skill@jfr992
 ```
 
-> **Note:** Auto-discovery on claudemarketplaces.com requires 5+ GitHub stars. Before that threshold, use manual installation or share the direct repository link.
-
 ### Manual Installation
-Clone to your Claude Code skills directory:
+
 ```bash
+# Clone to Claude skills directory
 git clone https://github.com/jfr992/terragrunt-skill.git ~/.claude/skills/terragrunt-skill
 ```
 
-### Local Testing
-To test the skill in a specific project, add it to your project's Claude Code settings:
+### Verify Installation
 
-```bash
-# Create .claude/settings.json in your project root
-mkdir -p .claude
-cat > .claude/settings.json << 'EOF'
-{
-  "skills": ["~/.claude/skills/terragrunt-skill"]
-}
-EOF
+After installation, try:
+```
+"Create a Terragrunt stack for a serverless API with Lambda, DynamoDB, and S3"
 ```
 
-Or add the skill path to your global Claude Code configuration.
+Claude will automatically use the skill when working with Terragrunt code.
 
 ## Quick Start
 
@@ -139,9 +168,14 @@ terragrunt stack run plan
 # Apply the stack
 terragrunt stack run apply
 
-# Target specific unit
-terragrunt stack run apply --queue-include-dir ".terragrunt-stack/dynamodb"
+# Target specific unit using filters (recommended)
+terragrunt stack run apply --filter '.terragrunt-stack/dynamodb'
+
+# Target unit and its dependencies
+terragrunt stack run apply --filter '.terragrunt-stack/lambda...'
 ```
+
+See [Terragrunt Filters](https://terragrunt.gruntwork.io/docs/features/filter/) for advanced filtering options.
 
 ## Usage
 
@@ -206,10 +240,94 @@ test-output/
 
 See [CLAUDE.md](CLAUDE.md) for contributor guidelines and repository architecture.
 
+## State Backend Bootstrap
+
+Terragrunt can automatically create state backend resources (S3 bucket + DynamoDB table) when you run any command:
+
+```hcl
+# root.hcl
+remote_state {
+  backend = "s3"
+  config = {
+    bucket         = "tfstate-${local.account_name}-${local.aws_region}"
+    key            = "${path_relative_to_include()}/terraform.tfstate"
+    region         = local.aws_region
+    encrypt        = true
+    dynamodb_table = "tfstate-locks-${local.account_name}-${local.aws_region}"
+  }
+  generate = {
+    path      = "backend.tf"
+    if_exists = "overwrite_terragrunt"
+  }
+}
+```
+
+Terragrunt automatically provisions the S3 bucket (with versioning, encryption, access logging) and DynamoDB table (with encryption) if they don't exist.
+
+See [State Backend](https://terragrunt.gruntwork.io/docs/features/state-backend/) for details.
+
+> **Note:** The `scripts/setup-state-backend.sh` in this repo provides an alternative manual approach with more control over bucket configuration.
+
+## Platform Engineering & Self-Service
+
+### Catalog Discovery
+
+The `terragrunt catalog` command enables self-service infrastructure by letting teams browse and scaffold from your catalog:
+
+```bash
+# Browse available modules, units, and stacks
+terragrunt catalog
+
+# Scaffold a specific unit
+terragrunt scaffold git@github.com:YOUR_ORG/infrastructure-catalog.git//units/rds
+```
+
+### Boilerplate Templates
+
+[Boilerplate](https://github.com/gruntwork-io/boilerplate) powers the scaffolding with interactive prompts:
+
+```yaml
+# units/rds/boilerplate.yml
+variables:
+  - name: instance_class
+    description: "RDS instance class"
+    type: string
+    default: "db.t3.medium"
+
+  - name: engine_version
+    description: "Database engine version"
+    type: string
+    default: "15.4"
+```
+
+When users run `terragrunt scaffold`, they're prompted for these values, generating a pre-configured `terragrunt.hcl`.
+
+### Self-Service Portal Integration
+
+The scaffold command can be integrated with internal developer platforms:
+
+```bash
+# API endpoint calls scaffold with predefined values
+terragrunt scaffold \
+  git@github.com:YOUR_ORG/infrastructure-catalog.git//units/rds \
+  --var instance_class=db.r5.large \
+  --var engine_version=15.4 \
+  --output-folder /deployments/team-a/rds
+```
+
+This enables:
+- **Standardized deployments** across teams
+- **Governance** via catalog-level policies
+- **Reduced toil** through automated configuration
+- **Version control** with automatic Git tag resolution
+
 ## References
 
 - [Terragrunt Documentation](https://terragrunt.gruntwork.io/docs/)
-- [Terragrunt Stacks](https://terragrunt.gruntwork.io/docs/rfc/stacks/)
+- [Terragrunt Stacks](https://terragrunt.gruntwork.io/docs/features/stacks/)
+- [Terragrunt Filters](https://terragrunt.gruntwork.io/docs/features/filter/)
+- [Terragrunt State Backend](https://terragrunt.gruntwork.io/docs/features/state-backend/)
+- [Boilerplate](https://github.com/gruntwork-io/boilerplate) - Template generation tool
 - [Terragrunt Cache Benchmark](https://github.com/jfr992/terragrunt-cache-test)
 - [OpenTofu Documentation](https://opentofu.org/docs/)
 

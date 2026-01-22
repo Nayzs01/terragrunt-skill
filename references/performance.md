@@ -30,6 +30,8 @@ Benefits:
 
 With OpenTofu 1.10+ and latest Terragrunt, provider caching is automatic via `TF_PLUGIN_CACHE_DIR`. No manual configuration needed.
 
+> **Note:** OpenTofu's auto provider cache is generally more performant at lower scales compared to Terraform. For larger operations, the explicit `--provider-cache` flag with Terragrunt's cache server provides better results.
+
 **Limitation:** Filesystem lock contention can occur with many concurrent operations.
 
 ### Dependency Output Fetching (Experimental)

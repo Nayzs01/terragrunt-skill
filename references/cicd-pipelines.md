@@ -9,7 +9,7 @@ This guide provides CI/CD pipeline templates for **Terragrunt Stacks** (explicit
 - OIDC-based authentication (no static credentials)
 - SSH-based Git access (recommended over HTTPS)
 - Provider caching for performance
-- Selective unit targeting with `--queue-include-dir`
+- Selective unit targeting with `--filter` ([docs](https://terragrunt.gruntwork.io/docs/features/filter/))
 
 > **Why SSH over HTTPS?**
 > - **Enhanced security**: SSH keys provide stronger authentication than passwords or tokens
@@ -32,9 +32,12 @@ terragrunt stack run plan
 # Apply entire stack
 terragrunt stack run apply
 
-# Target specific units within the stack
-terragrunt stack run plan --queue-include-dir ".terragrunt-stack/dynamodb"
-terragrunt stack run apply --queue-include-dir ".terragrunt-stack/lambda"
+# Target specific units within the stack (using --filter)
+terragrunt stack run plan --filter '.terragrunt-stack/dynamodb'
+terragrunt stack run apply --filter '.terragrunt-stack/lambda'
+
+# Target unit and its dependencies
+terragrunt stack run apply --filter '.terragrunt-stack/lambda...'
 
 # Destroy stack
 terragrunt stack run destroy
@@ -44,12 +47,12 @@ terragrunt stack run destroy
 
 | Flag | Description | Use Case |
 |------|-------------|----------|
-| `--queue-include-dir` | Target specific units by path | Deploy only changed components |
+| `--filter` | Flexible unit targeting (recommended) | Target units, dependencies, patterns |
+| `--queue-include-dir` | Target specific units by path (legacy) | Simple path-based targeting |
 | `--queue-ignore-dag-order` | Run units concurrently | Faster plans (⚠️ dangerous for apply) |
 | `--queue-ignore-errors` | Continue on failures | Identify all errors at once |
 | `--out-dir` | Save plan files to directory | Artifact storage for apply stage |
 | `--parallelism N` | Limit concurrent units | Prevent rate limiting |
-| `--filter` | Flexible unit targeting | Complex filtering patterns |
 
 > **Note:** The `.terragrunt-stack` directory is auto-generated. Use `terragrunt stack generate` to pre-generate it, or `terragrunt stack clean` to remove it.
 
